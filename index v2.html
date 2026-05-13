@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Cap Table Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f3; color: #1a1a1a; font-size: 14px; }
+  #login-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 2rem; background: #f5f5f3; }
+  #dashboard { display: none; padding: 1.5rem; max-width: 1400px; margin: 0 auto; }
+  .login-card { background: #fff; border: 1px solid #e5e5e2; border-radius: 12px; padding: 2.5rem 2rem; width: 100%; max-width: 380px; box-shadow: 0 2px 12px rgba(0,0,0,0.07); }
+  .login-logo { text-align: center; margin-bottom: 2rem; }
+  .logo-mark { width: 48px; height: 48px; background: #185FA5; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 1rem; }
+  .logo-mark span { color: #fff; font-size: 22px; font-weight: 600; }
+  .login-logo h2 { font-size: 18px; font-weight: 600; color: #1a1a1a; }
+  .login-logo p { font-size: 13px; color: #888; margin-top: 4px; }
+  .form-group { margin-bottom: 1rem; }
+  .form-group label { display: block; font-size: 12px; color: #555; margin-bottom: 5px; font-weight: 500; }
+  .form-group input { width: 100%; padding: 9px 12px; font-size: 14px; border: 1px solid #ddd; border-radius: 8px; background: #fafafa; color: #1a1a1a; outline: none; transition: border-color 0.15s; }
+  .form-group input:focus { border-color: #185FA5; background: #fff; }
+  .login-btn { width: 100%; padding: 10px; background: #185FA5; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 0.5rem; }
+  .login-btn:hover { background: #0C447C; }
+  .login-error { color: #A32D2D; font-size: 12px; margin-top: 8px; display: none; text-align: center; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid #e5e5e2; }
+  .topbar-left { display: flex; align-items: center; gap: 10px; }
+  .topbar-logo { width: 34px; height: 34px; background: #185FA5; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+  .topbar-logo span { color: #fff; font-size: 15px; font-weight: 600; }
+  .topbar h1 { font-size: 16px; font-weight: 600; color: #1a1a1a; }
+  .logout-btn { font-size: 12px; color: #888; cursor: pointer; border: 1px solid #e5e5e2; padding: 5px 12px; border-radius: 8px; background: #fff; }
+  .logout-btn:hover { background: #f5f5f3; }
+  .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
+  .metric-card { background: #fff; border: 1px solid #e5e5e2; border-radius: 10px; padding: 1rem 1.1rem; }
+  .metric-label { font-size: 11px; color: #888; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 500; }
+  .metric-value { font-size: 22px; font-weight: 600; color: #1a1a1a; }
+  .metric-sub { font-size: 11px; color: #aaa; margin-top: 2px; }
+  .precos-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
+  .preco-card { background: #fff; border: 1px solid #e5e5e2; border-radius: 10px; padding: 0.875rem 1rem; }
+  .preco-card-title { font-size: 11px; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.6rem; padding-bottom: 0.4rem; border-bottom: 1px solid #e5e5e2; }
+  .preco-row { display: flex; justify-content: space-between; align-items: center; padding: 3px 0; font-size: 12px; }
+  .preco-row .lbl { color: #888; }
+  .preco-row .val { font-weight: 500; color: #1a1a1a; }
+  .preco-row .val.highlight { color: #185FA5; font-weight: 600; }
+  .preco-row.avg { margin-top: 6px; padding-top: 6px; border-top: 1px solid #e5e5e2; }
+  .preco-row.avg .lbl { font-weight: 500; color: #555; font-size: 11px; }
+  .preco-row.avg .val { color: #185FA5; font-weight: 600; }
+  .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1.5rem; }
+  .chart-card { background: #fff; border: 1px solid #e5e5e2; border-radius: 10px; padding: 1.1rem; }
+  .chart-title { font-size: 13px; font-weight: 600; color: #1a1a1a; margin-bottom: 0.75rem; }
+  .chart-subtitle { font-size: 11px; color: #888; margin-top: -0.5rem; margin-bottom: 0.75rem; }
+  .table-card { background: #fff; border: 1px solid #e5e5e2; border-radius: 10px; padding: 1.1rem; margin-bottom: 1.5rem; overflow-x: auto; }
+  .filter-row { display: flex; gap: 8px; margin-bottom: 1rem; flex-wrap: wrap; align-items: center; }
+  .filter-row label { font-size: 12px; color: #888; font-weight: 500; }
+  .filter-row input, .filter-row select { font-size: 12px; padding: 5px 9px; border: 1px solid #ddd; border-radius: 7px; background: #fafafa; color: #1a1a1a; outline: none; }
+  .filter-row input:focus, .filter-row select:focus { border-color: #185FA5; }
+  .clear-btn { font-size: 11px; color: #888; cursor: pointer; border: 1px solid #e5e5e2; padding: 4px 9px; border-radius: 7px; background: #fff; display: none; }
+  .clear-btn:hover { background: #f5f5f3; }
+  table { width: 100%; font-size: 11px; border-collapse: collapse; min-width: 1200px; }
+  th { font-size: 10px; font-weight: 600; color: #888; text-align: left; padding: 6px 6px; border-bottom: 1px solid #e5e5e2; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.04em; }
+  th.group-header { text-align: center; background: #fafaf8; }
+  td { padding: 7px 6px; border-bottom: 1px solid #f0f0ee; color: #1a1a1a; white-space: nowrap; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #fafaf8; }
+  .sep { border-left: 1px solid #e5e5e2; }
+  .badge { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 20px; font-weight: 600; }
+  .badge-special { background: #F1EFE8; color: #444441; }
+  .total-row td { font-weight: 600; background: #f8f8f6; }
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 10px; font-size: 11px; color: #888; }
+  .legend span { display: flex; align-items: center; gap: 5px; }
+  .legend-dot { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
+  @media (max-width: 600px) { .charts-grid { grid-template-columns: 1fr; } .metrics-grid { grid-template-columns: repeat(2,1fr); } .precos-grid { grid-template-columns: 1fr; } #dashboard { padding: 1rem; } }
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="logo-mark"><span>C</span></div>
+      <h2>Cap Table Dashboard</h2>
+      <p>Acesso restrito a investidores</p>
+    </div>
+    <div class="form-group">
+      <label>Usuário</label>
+      <input type="text" id="username" placeholder="seu usuário" autocomplete="username" />
+    </div>
+    <div class="form-group">
+      <label>Senha</label>
+      <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" />
+    </div>
+    <div class="login-error" id="login-error">Usuário ou senha incorretos.</div>
+    <button class="login-btn" onclick="doLogin()">Entrar</button>
+  </div>
+</div>
+
+<div id="dashboard">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-logo"><span>C</span></div>
+      <h1>Cap Table — Participação de Investidores</h1>
+    </div>
+    <button class="logout-btn" onclick="doLogout()">Sair</button>
+  </div>
+
+  <div class="metrics-grid" id="metrics-grid"></div>
+
+  <div class="precos-grid">
+    <div class="preco-card">
+      <div class="preco-card-title">Rodada Seed</div>
+      <div class="preco-row"><span class="lbl">Preço por Quota</span><span class="val highlight">$ 8,4161</span></div>
+    </div>
+    <div class="preco-card">
+      <div class="preco-card-title">Series A</div>
+      <div class="preco-row"><span class="lbl">Preço por Quota</span><span class="val highlight">$ 39,7004</span></div>
+      <div class="preco-row"><span class="lbl">Preço por Quota Bonificação</span><span class="val">$ 24,8128</span></div>
+    </div>
+    <div class="preco-card">
+      <div class="preco-card-title">Series A — Secundária (US$ 20m)</div>
+      <div class="preco-row"><span class="lbl">Preço por Quota</span><span class="val highlight">$ 12,3726</span></div>
+    </div>
+    <div class="preco-card">
+      <div class="preco-card-title">Series B — Primária</div>
+      <div class="preco-row"><span class="lbl">Preço por Quota</span><span class="val highlight">$ 46,7064</span></div>
+      <div class="preco-row"><span class="lbl"># Cotas Vintage</span><span class="val">85.641</span></div>
+      <div class="preco-row"><span class="lbl">USD Vintage</span><span class="val">$ 4.000.000</span></div>
+    </div>
+    <div class="preco-card">
+      <div class="preco-card-title">Series B — Secundária</div>
+      <div class="preco-row"><span class="lbl">Preço por Quota</span><span class="val highlight">$ 10,3792</span></div>
+      <div class="preco-row"><span class="lbl"># Cotas Vintage</span><span class="val">192.689</span></div>
+      <div class="preco-row"><span class="lbl">USD Vintage</span><span class="val">$ 1.500.000</span></div>
+      <div class="preco-row avg"><span class="lbl">Preço Médio B (Primária + Secundária)</span><span class="val">$ 21,5569</span></div>
+    </div>
+    <div class="preco-card">
+      <div class="preco-card-title">Warrant</div>
+      <div class="preco-row"><span class="lbl">Preço por Quota</span><span class="val highlight">$ 28,2545</span></div>
+      <div class="preco-row"><span class="lbl"># Cotas Vintage</span><span class="val">35.393</span></div>
+      <div class="preco-row"><span class="lbl">USD Vintage</span><span class="val">$ 1.000.000</span></div>
+      <div class="preco-row avg"><span class="lbl">Preço Médio (Prim. + Sec. + Warrant)</span><span class="val">$ 22,3125</span></div>
+    </div>
+  </div>
+
+  <div class="charts-grid">
+    <div class="chart-card">
+      <div class="chart-title">Composição por tipo de ação</div>
+      <div style="position:relative;height:220px;"><canvas id="chartTipos"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Top 10 investidores — participação FDB (%)</div>
+      <div style="position:relative;height:220px;"><canvas id="chartTop10"></canvas></div>
+    </div>
+  </div>
+  <div class="chart-card" style="margin-bottom:1.5rem;">
+    <div class="chart-title" id="rodadas-title">Aportes por rodada</div>
+    <div class="chart-subtitle" id="rodadas-subtitle" style="display:none"></div>
+    <div class="legend" id="legend-rodadas"></div>
+    <div style="position:relative;height:200px;"><canvas id="chartRodadas"></canvas></div>
+  </div>
+
+  <div class="table-card">
+    <div class="filter-row">
+      <label>Buscar:</label>
+      <input type="text" id="search-input" placeholder="Nome do investidor..." style="min-width:180px;" oninput="onSearch()" />
+      <button class="clear-btn" id="clear-btn" onclick="clearSearch()">✕ limpar</button>
+      <label style="margin-left:4px;">Tipo de ação:</label>
+      <select id="filter-tipo" onchange="renderTable()">
+        <option value="">Todos</option>
+        <option value="on">ON B (Founders)</option>
+        <option value="a1">Pref A1 (2021)</option>
+        <option value="a2">Pref A2 (Dez. 2024)</option>
+        <option value="a3">Pref A3 (2022+2023)</option>
+        <option value="b">Pref B (2025)</option>
+        <option value="b1">Pref B1 (2025)</option>
+        <option value="b2">Pref B2 (2025)</option>
+      </select>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th rowspan="2" style="width:12%">Investidor</th>
+          <th class="group-header sep" colspan="8">Ações por tipo</th>
+          <th class="group-header sep" colspan="6">Aportes por rodada (USD)</th>
+          <th rowspan="2" class="sep" style="text-align:right">Total aporte</th>
+          <th rowspan="2" style="text-align:right">Valuation médio</th>
+          <th rowspan="2" style="text-align:right">Part. FDB (%)</th>
+        </tr>
+        <tr>
+          <th class="sep" style="text-align:right">ON B</th>
+          <th style="text-align:right">Pref A1</th>
+          <th style="text-align:right">Pref A2</th>
+          <th style="text-align:right">Pref A3</th>
+          <th style="text-align:right">Pref B</th>
+          <th style="text-align:right">Pref B1</th>
+          <th style="text-align:right">Pref B2</th>
+          <th style="text-align:right;font-weight:700">Total</th>
+          <th class="sep" style="text-align:right">Seed 2021</th>
+          <th style="text-align:right">Pré-A 2022-23</th>
+          <th style="text-align:right">Cash-out 2022-23</th>
+          <th style="text-align:right">Pré-A 2024</th>
+          <th style="text-align:right">Cash-out 2024</th>
+          <th style="text-align:right">Rodada 2025</th>
+        </tr>
+      </thead>
+      <tbody id="table-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const USERS = { "admin": "Darwin@2026" };
+
+const INVESTORS = [
+  { name:"Addikai Holdings Ltd.", on:0.0000, a1:0.0000, a2:0.0000, a3:2519.0000, b:0.0000, b1:0.0000, b2:0.0000, total:2519.0000, seed:0.0000, preA2223:100000.0000, cout2223:0.0000, preA24:0.0000, cout24:0.0000, r2025:0.0000, aporte:100000.0000, valuation:76495712.5844, fdb:0.00130726, special:"" },
+  { name:"Ana Laura Magalh\u00e3es Barata", on:0.0000, a1:0.0000, a2:0.0000, a3:0.0000, b:0.0000, b1:0.0000, b2:0.0000, total:0.0000, seed:52600.3711, preA2223:0.0000, cout2223:0.0000, preA24:0.0000, cout24:0.0000, r2025:0.0000, aporte:0.0000, valuation:0.0000, fdb:0.00000000, special:"" },
+  { name:"Andr\u00e9 Bernardes", on:0.0000, a1:631.0000, a2:0.0000, a3:0.0000, b:0.0000, b1:0.0000, b2:0.0000, total:631.0000, seed:5313.7511, preA2223:0.0000, cout2223:0.0000, preA24:0.0000, cout24:0.0000, r2025:0.0000, aporte:5313.7511, valuation:16226957.9830, fdb:0.00032746, special:"" },
+  { name:"Andre Soares de S\u00e1", on:0.0000, a1:2250.0000, a2:0.0000, a3:0.0000, b:0.0000, b1:0.0000, b2:0.0000, total:2250.0000, seed:18936.1311, preA2223:0.0000, cout2223:0.0000, preA24:0.0000, cout24:0.0000, r2025:0.0000, aporte:18936.1311, valuation:16217129.9171, fdb:0.00116766, special:"" },
+  { name:"Andr\u00e9 Takeshi Fujii", on:0.0000, a1:6992.0000, a2:0.0000, a3:1133.0000, b:0.0000, b1:0.0000, b2:0.0000, total:8125.0000, seed:58846.8411, preA2223:45000.0000, cout2223:0.0000, preA24:0.0000, cout24:0.0000, r2025:0.0000, aporte:103846.8411, valuation:24628342.4002, fdb:0.00421656, special:"" },
+  { name:"Ant\u00f3nio Carlos Romeiras de Lemos", on:0.0000, a1:6250.0000, a2:0.0000, a3:0.0000, b:0.0000, b1:0.0000, b2:0.0000, total:6250.0000, seed:52600.3711, preA2223:0.0000, cout2223:0.0000, preA24:0.0000, cout24:0.0000, r2025:0.0000, aporte:52600.3711, valuation:16217132.0486, fdb:0.00324351, special:"" },
+  { name:"Antonio Dias Leite Neto", on:0.0000, a1:5941.0000, a2:581.0000, a3:1637.0000, b:0.0000, b1:0.0000, b2:0.0000, total:8159.0000, seed:50000.0011, preA2223:65000.0000, cout2223:0.0000, preA24:9600.0000, cout24:2400.0000, r2025:0.0000, aporte:127000.0011, valuation:29993838.8456, fdb:0.00423420, special:"" },
+  { name:"Arthur Bergamo Silva", on:0.0000, a1:0.0000, a2:0.0000, a3:1511.0000, b:0.0000, b1:0.0000, b2:0.0000, total:1511.0000, seed:0.0000, preA2223:60000.0000, cout2223:0.0000, preA24:0.0000, cout24:0.0000, r2025:0.0000, aporte:60000.0000, valuation:76515962.9385, fdb:0.00078415, special:"" },
+  { name:"Avalon Development Associates", on:0.0000, a1:0.0000, a2:4840.0000, a3:2519.0000, b:0.0000, b1:0.0000, b2:0.0000, total:7359.0000, seed:0.0000, preA2223:100000.0000, cout2223:0.0000, preA24:80000.0000, cout24:20000.0000, r2025:0.0000, aporte:200000.0000, valuation:52369262.1280, fdb:0.00381903, special:"" },
+  { name:"Azimute Ltd.", on:0.0000, a1:0.0000, a2:0.0000, a3:12594.0000, b:0.0000, b1:0.0000, b2:0.0000, total:12594.0000, seed:0.0000, preA2223:0.0000, cout2223:500000.0000, preA24:0.0000, cout24:0.0000, r2025:0.0000, aporte:500000.0000, valuation:76501786.5650, fdb:0.00653580, special:"" },
+  { name:"Bedece Com\u00e9rcio e Participa\u00e7\u00f5es Ltda.", on:0.0000, a1:62500.0000, a2:9681.0000, a3:0.0000, b:0.0000, b1:0.0000, b2:0.0000, total:72181.0000, seed:526003.7111, preA2223:0.0000, cout2223:0.0000, preA24:160000.0000, cout24:40000.0000, r2025:0.0000, aporte:726003.7111, valuation:19381224.3255, fdb:0.03745913, special:"" },
+  { name:"Bemaba Investments", on:0.0000, a1:0.0000, a2:4840.0000, a3:2519.0000, b:0.0000, b1:0.0000, b2:0.0000, total:7359.0000, seed:0.0000, preA2223:0.0000, cout2223:100000.0000, preA24:80000.0000, cout24:20000.0000, r2025:0.0000, aporte:200000.0000, valuation:52369262.1280, fdb:0.00381903, special:"" },
+  { name:"BFS Two, LLC", on:0.0000, a1:0.0000, a2:0.0000, a3:0.0000, b:0.0000, b1:0.0000, b2:0.0000, total:0.0000, seed:0.0000, preA2223:0.0000, cout2223:0.0000, preA24:0.0000, cout24:0.0000, r2025:200058.0000, aporte:200058.0000, valuation:60177515.1055, fdb:0.00332446, special:"Nota Conv." },
+  { name:"BLCP Ltd.", on:0.0000, a1:488.0000, a2:194.0000, a3:0.0000, b:0.0000, b1:0.0000, b2:0.0000, total:682.0000, seed:4110.0000, preA2223:0.0000, cout2223:0.0000, preA24:3200.0000, cout24:800.0000, r2025:0.0000, aporte:8110.0000, valuation:22914043.9443, fdb:0.00035393, special:"" },
+  { name:"Brown Stone Enerprises Inc.", on:0.0000, a1:25000.0000, a2:0.0000, a3:0.0000, b:0.0000, b1:0.0000, b2:0.0000, total:25000.0000, seed:210401.4811, preA2223:0.0000, cout2223:0.0000, preA24:0.0000, cout24:0.0000, r2025:0.0000, aporte:210401.4811, valuation:16217131.7917, fdb:0.01297403, special:"" },
+  { name:"Bruna Paula Besse Matias Pinto", on:0.0000, a1:0.0000, a2:0.0000, a3:1008.0000, b:0.0000, b1:0.0000, b2:0.0000, total:1008.0000, seed:0.0000, preA2223:40000.0000, cout2223:0.0000, preA24:0.0000, cout24:0.0000, r2025:0.0000, aporte:40000.0000, valuation:76465357.1429, fdb:0.00052311, special:"" },
+  { name:"Carlos Alberto Moura de Souza Barros Filho", on:319561.5425, a1:0.0000, a2:0.0000, a3:0.0000, b:0.0000, b1:0.0000, b2:0.0000, total:319561.5425, seed:0.0000, preA2223:0.0000, cout2223:0.0000, preA24:0.0000, cout24:0.0000, r2025:0.0000, aporte:0.0000, valuation:0.0000, fdb:0.12366350, special:"" },
+  { name:"Columbus Capital Investments", on:0.0000, a1:3084.0000, a2:726.0000, a3:378.0000, b:0.0000, b1:0.0000, b2:0.0000, total:4188.0000, seed:25952.2411, preA2223:15000.0000, cout2223:0.0000, preA24:12000.0000, cout24:3000.0000, r2025:0.0000, aporte:55952.2411, valuation:25744002.8910, fdb:0.00217341, special:"" },
+  { name:"Daisy Bianchini", on:0.0000, a1:0.0000, a2:0.0000, a3:5038.0000, b:0.0000, b1:4638.6000, b2:0.0000, total:9676.6000, seed:0.0000, preA2223:200000.0000, cout2223:0.0000, preA24:0.0000, cout24:0.0000, r2025:100000.5054, aporte:300000.5054, valuation:59739895.6083, fdb:0.00502178, special:"" },
+  { name:"Daledofe LLC", on:0.0000, a1:0.0000, a2:0.0000, a3:2519.0190, b:0.0000, b1:0.0000, b2:0.0000, total:2519.0190, seed:0.0000, preA2223:18325.3500, cout2223:81674.6500, preA24:0.0000, cout24:0.0000, r2025:0.0000, aporte:100000.0000, valuation:76495135.6064, fdb:0.00130727, special:"" },
+  { name:"Daniele Dabus", on:0.0000, a1:0.0000, a2:0.0000, a3:1259.0000, b:0.0000, b1:0.0000, b2:0.0000, total:1259.0000, seed:0.0000, preA2223:50000.0000, cout2223:0.0000, preA24:0.0000, cout24:0.0000, r2025:0.0000, aporte:50000.0000, valuation:76526092.1366, fdb:0.00065337, special:"" },
+  { name:"Danilo Matsunaga", on:0.0000, a1:0.0000, a2:3872.0000, a3:7557.0000, b:0.0000, b1:2319.0000, b2:0.0000, total:13748.0000, seed:0.0000, preA2223:300000.0000, cout2223:0.0000, preA24:64000.0000, cout24:16000.0000, r2025:49991.9493, aporte:429991.9493, valuation:60267900.5639, fdb:0.00713468, special:"" },
+  { name:"Diego Rondon Borin", on:0.0000, a1:0.0000, a2:0.0000, a3:2519.0000, b:0.0000, b1:0.0000, b2:0.0000, total:2519.0000, seed:0.0000, preA2223:0.0000, cout2223:100000.0000, preA24:0.0000, cout24:0.0000, r2025:0.0000, aporte:100000.0000, valuation:76495712.5844, fdb:0.00130726, special:"" },
+  { name:"Duxx Participa\u00e7\u00f5es e Consultoria Ltda.", on:0.0000, a1:17043.0000, a2:0.0000, a3:0.0000, b:0.0000, b1:9278.0000, b2:0.0000, total:26321.0000, seed:143436.3511, preA2223:0.0000, cout2223:0.0000, preA24:0.0000, cout24:0.0000, r2025:199998.9349, aporte:343435.2860, valuation:25142461.3591, fdb:0.01365957, special:"" },
+  { name:"Eberle Part Ltd.", on:0.0000, a1:0.0000, a2:19363.0000, a3:0.0000, b:0.0000, b1:0.0000, b2:0.0000, total:19363.0000, seed:0.0000, preA2223:0.0000, cout2223:0.0000, preA24:320000.0000, cout24:80000.0000, r2025:0.0000, aporte:400000.0000, valuation:39806372.9794, fdb:0.01004864, special:"" },
+  { name:"Eqwow", on:0.0000, a1:0.0000, a2:0.0000, a3:0.0000, b:0.0000, b1:0.0000, b2:23195.0000, total:23195.0000, seed:0.0000, preA2223:0.0000, cout2223:0.0000, preA24:0.0000, cout24:0.0000, r2025:500002.5269, aporte:500002.5269, valuation:41537761.1216, fdb:0.01203730, special:"" },
+  { name:"EPS Investimentos Ltd.", on:0.0000, a1:0.0000, a2:0.0000, a3:2519.0000, b:0.0000, b1:0.0000, b2:0.0000, total:2519.0000, seed:0.0000, preA2223:100000.0000, cout2223:0.0000, preA24:0.0000, cout24:0.0000, r2025:0.0000, aporte:100000.0000, valuation:76495712.5844, fdb:0.00130726, special:"" },
+  { name:"Esseg Offshore Ltda.", on:0.0000, a1:0.0000, a2:0.0000, a3:12594.0000, b:0.0000, b1:0.0000, b2:0.0000, total:12594.0000, seed:0.0000, preA2223:500000.0000, cout2223:0.0000, preA24:0.0000, cout24:0.0000, r2025:0.0000, aporte:500000.0000, valuation:76501786.5650, fdb:0.00653580, special:"" },
+  { name:"Fabiana Resende", on:0.0000, a1:0.0000, a2:3630.0000, a3:2519.0000, b:0.0000, b1:0.0000, b2:0.0000, total:6149.0000, seed:0.0000, preA2223:100000.0000, cout2223:0.0000, preA24:60000.0000, cout24:15000.0000, r2025:0.0000, aporte:175000.0000, valuation:54840173.1989, fdb:0.00319109, special:"" },
+  { name:"Felipe Lorenzi de Britto", on:0.0000, a1:0.0000, a2:0.0000, a3:2519.0000, b:0.0000, b1:0.0000, b2:0.0000, total:2519.0000, seed:0.0000, preA2223:0.0000, cout2223:100000.0000, preA24:0.0000, cout24:0.0000, r2025:0.0000, aporte:100000.0000, valuation:76495712.5844, fdb:0.00130726, special:"" },
+  { name:"Fernando Lima de Freitas", on:0.0000, a1:0.0000, a2:0.0000, a3:1259.0000, b:0.0000, b1:0.0000, b2:0.0000, total:1259.0000, seed:0.0000, preA2223:0.0000, cout2223:50000.0000, preA24:0.0000, cout24:0.0000, r2025:0.0000, aporte:50000.0000, valuation:76526092.1366, fdb:0.00065337, special:"" },
+  { name:"Firmino Lima de Freitas Filho", on:319561.5425, a1:0.0000, a2:0.0000, a3:0.0000, b:0.0000, b1:0.0000, b2:0.0000, total:319561.5425, seed:0.0000, preA2223:0.0000, cout2223:0.0000, preA24:0.0000, cout24:0.0000, r2025:0.0000, aporte:0.0000, valuation:0.0000, fdb:0.12366350, special:"" },
+  { name:"FM2 de Participa\u00e7\u00f5es SPE Ltda.", on:0.0000, a1:6250.0000, a2:629.0000, a3:0.0000, b:0.0000, b1:0.0000, b2:0.0000, total:6879.0000, seed:52600.3711, preA2223:0.0000, cout2223:0.0000, preA24:10400.0000, cout24:2600.0000, r2025:0.0000, aporte:65600.3711, valuation:18375799.7244, fdb:0.00356993, special:"" },
+  { name:"Frederico Tardin Vita", on:0.0000, a1:0.0000, a2:0.0000, a3:0.0000, b:0.0000, b1:0.0000, b2:0.0000, total:0.0000, seed:52600.3711, preA2223:0.0000, cout2223:0.0000, preA24:0.0000, cout24:0.0000, r2025:0.0000, aporte:52600.3711, valuation:0.0000, fdb:0.00000000, special:"" },
+  { name:"Gisela Dantas Rodenburg", on:0.0000, a1:3683.0000, a2:581.0000, a3:504.0000, b:0.0000, b1:0.0000, b2:0.0000, total:4768.0000, seed:31000.0011, preA2223:20000.0000, cout2223:0.0000, preA24:9600.0000, cout24:2400.0000, r2025:0.0000, aporte:63000.0011, valuation:25460655.0212, fdb:0.00247441, special:"" },
+  { name:"Herilo Batholo de Britto", on:0.0000, a1:0.0000, a2:1452.0000, a3:2519.0000, b:0.0000, b1:0.0000, b2:0.0000, total:3971.0000, seed:0.0000, preA2223:0.0000, cout2223:100000.0000, preA24:24000.0000, cout24:6000.0000, r2025:0.0000, aporte:130000.0000, valuation:63082475.4470, fdb:0.00206079, special:"" },
+  { name:"Intrinsiq Investiments Limited", on:0.0000, a1:0.0000, a2:4840.0000, a3:37783.0000, b:0.0000, b1:23195.0000, b2:0.0000, total:65818.0000, seed:0.0000, preA2223:1500000.0000, cout2223:0.0000, preA24:80000.0000, cout24:20000.0000, r2025:500002.5269, aporte:2100002.5269, valuation:61480925.7227, fdb:0.03415698, special:"" },
+  { name:"Invisto I Fundo de Investimento em Participa\u00e7\u00f5es Multiestrat\u00e9gia", on:0.0000, a1:7273.0000, a2:48406.0000, a3:39672.0000, b:0.0000, b1:0.0000, b2:0.0000, total:95351.0000, seed:61207.7011, preA2223:1575000.0000, cout2223:0.0000, preA24:800000.0000, cout24:200000.0000, r2025:0.0000, aporte:2636207.7011, valuation:53274530.9108, fdb:0.04948345, special:"" },
+  { name:"Italo Medeiros Faraco Junior", on:0.0000, a1:6250.0000, a2:0.0000, a3:1511.0000, b:0.0000, b1:0.0000, b2:0.0000, total:7761.0000, seed:52600.3711, preA2223:60000.0000, cout2223:0.0000, preA24:0.0000, cout24:0.0000, r2025:0.0000, aporte:112600.3711, valuation:27956796.1995, fdb:0.00402766, special:"" },
+  { name:"Jo\u00e3o Marcos Antunes Pompeu S\u00e1", on:0.0000, a1:0.0000, a2:0.0000, a3:1259.0000, b:0.0000, b1:0.0000, b2:0.0000, total:1259.0000, seed:0.0000, preA2223:0.0000, cout2223:50000.0000, preA24:0.0000, cout24:0.0000, r2025:0.0000, aporte:50000.0000, valuation:76526092.1366, fdb:0.00065337, special:"" },
+  { name:"Leyla Martins Calfat", on:0.0000, a1:1074.0000, a2:435.0000, a3:0.0000, b:0.0000, b1:0.0000, b2:0.0000, total:1509.0000, seed:9042.0000, preA2223:0.0000, cout2223:0.0000, preA24:7200.0000, cout24:1800.0000, r2025:0.0000, aporte:18042.0000, valuation:23038844.8867, fdb:0.00078311, special:"" },
+  { name:"Livio Fran\u00e7a de Oliveira", on:0.0000, a1:6250.0000, a2:0.0000, a3:0.0000, b:0.0000, b1:0.0000, b2:0.0000, total:6250.0000, seed:52600.3711, preA2223:0.0000, cout2223:0.0000, preA24:0.0000, cout24:0.0000, r2025:0.0000, aporte:52600.3711, valuation:16217132.0486, fdb:0.00324351, special:"" },
+  { name:"Marcel Lanas Campos", on:0.0000, a1:0.0000, a2:0.0000, a3:755.9149, b:0.0000, b1:0.0000, b2:0.0000, total:755.9149, seed:0.0000, preA2223:0.0000, cout2223:30000.0000, preA24:0.0000, cout24:0.0000, r2025:0.0000, aporte:30000.0000, valuation:76473961.0704, fdb:0.00039229, special:"" },
+  { name:"MZL Limited", on:0.0000, a1:17048.0000, a2:0.0000, a3:0.0000, b:0.0000, b1:0.0000, b2:0.0000, total:17048.0000, seed:143474.7611, preA2223:0.0000, cout2223:0.0000, preA24:0.0000, cout24:0.0000, r2025:0.0000, aporte:143474.7611, valuation:16216881.2179, fdb:0.00884725, special:"" },
+  { name:"MZR Ltd.", on:0.0000, a1:814.0000, a2:339.0000, a3:0.0000, b:0.0000, b1:0.0000, b2:0.0000, total:1153.0000, seed:6848.0000, preA2223:0.0000, cout2223:0.0000, preA24:5600.0000, cout24:1400.0000, r2025:0.0000, aporte:13848.0000, valuation:23143178.7476, fdb:0.00059836, special:"" },
+  { name:"Nestal Ltd. S.A.", on:0.0000, a1:0.0000, a2:24203.0000, a3:0.0000, b:0.0000, b1:23195.0000, b2:0.0000, total:47398.0000, seed:0.0000, preA2223:0.0000, cout2223:0.0000, preA24:400000.0000, cout24:100000.0000, r2025:500002.5269, aporte:1000002.5269, valuation:40654286.4512, fdb:0.02459771, special:"" },
+  { name:"Outros Investidores Series B", on:0.0000, a1:0.0000, a2:0.0000, a3:0.0000, b:0.0000, b1:0.0000, b2:0.0000, total:0.0000, seed:0.0000, preA2223:0.0000, cout2223:0.0000, preA24:0.0000, cout24:0.0000, r2025:0.0000, aporte:0.0000, valuation:0.0000, fdb:0.00000000, special:"" },
+  { name:"Pedro Rabelo Schittkowski", on:0.0000, a1:6250.0000, a2:0.0000, a3:0.0000, b:0.0000, b1:0.0000, b2:0.0000, total:6250.0000, seed:52600.3711, preA2223:0.0000, cout2223:0.0000, preA24:0.0000, cout24:0.0000, r2025:0.0000, aporte:52600.3711, valuation:16217132.0486, fdb:0.00324351, special:"" },
+  { name:"Philippe Agiman", on:0.0000, a1:6250.0000, a2:0.0000, a3:2015.0000, b:0.0000, b1:0.0000, b2:0.0000, total:8265.0000, seed:52600.3711, preA2223:80000.0000, cout2223:0.0000, preA24:0.0000, cout24:0.0000, r2025:0.0000, aporte:132600.3711, valuation:30914850.0065, fdb:0.00428921, special:"" },
+  { name:"Porto Luna Group Inc.", on:0.0000, a1:6250.0000, a2:2033.0000, a3:0.0000, b:0.0000, b1:0.0000, b2:0.0000, total:8283.0000, seed:52600.3711, preA2223:0.0000, cout2223:0.0000, preA24:33600.0000, cout24:8400.0000, r2025:0.0000, aporte:94600.3711, valuation:22007486.3339, fdb:0.00429855, special:"" },
+  { name:"Project Eight Holdings Inc.", on:0.0000, a1:6250.0000, a2:2033.0000, a3:0.0000, b:0.0000, b1:0.0000, b2:0.0000, total:8283.0000, seed:52600.3711, preA2223:0.0000, cout2223:0.0000, preA24:33600.0000, cout24:8400.0000, r2025:0.0000, aporte:94600.3711, valuation:22007486.3339, fdb:0.00429855, special:"" },
+  { name:"Ricardo Antonio Rego Bechara", on:0.0000, a1:0.0000, a2:0.0000, a3:0.0000, b:0.0000, b1:0.0000, b2:0.0000, total:0.0000, seed:30000.0011, preA2223:0.0000, cout2223:0.0000, preA24:0.0000, cout24:0.0000, r2025:0.0000, aporte:30000.0011, valuation:0.0000, fdb:0.00000000, special:"" },
+  { name:"Ricardo Foernges Hoerde", on:0.0000, a1:6250.0000, a2:0.0000, a3:7557.0000, b:0.0000, b1:0.0000, b2:0.0000, total:13807.0000, seed:52600.3711, preA2223:300000.0000, cout2223:0.0000, preA24:0.0000, cout24:0.0000, r2025:0.0000, aporte:352600.3711, valuation:49209471.6668, fdb:0.00716529, special:"" },
+  { name:"Rodrigo Arrifano Nagase", on:0.0000, a1:0.0000, a2:0.0000, a3:1259.0000, b:0.0000, b1:0.0000, b2:0.0000, total:1259.0000, seed:0.0000, preA2223:50000.0000, cout2223:0.0000, preA24:0.0000, cout24:0.0000, r2025:0.0000, aporte:50000.0000, valuation:76526092.1366, fdb:0.00065337, special:"" },
+  { name:"Romeu Alberti Sobrinho", on:0.0000, a1:0.0000, a2:0.0000, a3:0.0000, b:0.0000, b1:0.0000, b2:0.0000, total:0.0000, seed:95637.0411, preA2223:0.0000, cout2223:0.0000, preA24:0.0000, cout24:0.0000, r2025:0.0000, aporte:95637.0411, valuation:0.0000, fdb:0.00000000, special:"" },
+  { name:"Santa Lucia Inv. & Arbitrage Ltd.", on:0.0000, a1:0.0000, a2:0.0000, a3:0.0000, b:122194.0000, b1:0.0000, b2:0.0000, total:122194.0000, seed:0.0000, preA2223:0.0000, cout2223:0.0000, preA24:0.0000, cout24:0.0000, r2025:5999979.0090, aporte:5999979.0090, valuation:41538898.2570, fdb:0.14444242, special:"" },
+  { name:"Sergio Zappa", on:0.0000, a1:0.0000, a2:9681.0000, a3:5038.0000, b:0.0000, b1:0.0000, b2:0.0000, total:14719.0000, seed:0.0000, preA2223:200000.0000, cout2223:0.0000, preA24:160000.0000, cout24:40000.0000, r2025:0.0000, aporte:400000.0000, valuation:52365704.1919, fdb:0.00763859, special:"" },
+  { name:"Sinergia Fundo de Investimento em Participa\u00e7\u00f5es Multiestrat\u00e9gia Multisetorial \u2013 Resp. Limitada", on:0.0000, a1:0.0000, a2:0.0000, a3:0.0000, b:0.0000, b1:0.0000, b2:46389.0000, total:46389.0000, seed:0.0000, preA2223:0.0000, cout2223:0.0000, preA24:0.0000, cout24:0.0000, r2025:999952.0317, aporte:999952.0317, valuation:41536454.0839, fdb:0.02407408, special:"" },
+  { name:"Triple J Overseas Ltd.", on:0.0000, a1:0.0000, a2:0.0000, a3:1259.0000, b:0.0000, b1:0.0000, b2:0.0000, total:1259.0000, seed:0.0000, preA2223:50000.0000, cout2223:0.0000, preA24:0.0000, cout24:0.0000, r2025:0.0000, aporte:50000.0000, valuation:76526092.1366, fdb:0.00065337, special:"" },
+  { name:"Venetus Entreprises Ltd.", on:0.0000, a1:6250.0000, a2:1839.0000, a3:2015.0000, b:0.0000, b1:0.0000, b2:0.0000, total:10104.0000, seed:52600.3711, preA2223:80000.0000, cout2223:0.0000, preA24:30400.0000, cout24:7600.0000, r2025:0.0000, aporte:170600.3711, valuation:32535081.2850, fdb:0.00524358, special:"" },
+  { name:"Vinicius Pereira Leite Bolotnick", on:0.0000, a1:0.0000, a2:4840.0000, a3:0.0000, b:0.0000, b1:2319.0000, b2:0.0000, total:7159.0000, seed:0.0000, preA2223:0.0000, cout2223:0.0000, preA24:80000.0000, cout24:20000.0000, r2025:49991.9493, aporte:149991.9493, valuation:40372054.3306, fdb:0.00371524, special:"" },
+  { name:"Yasmin Aponi Sanchez", on:0.0000, a1:0.0000, a2:0.0000, a3:0.0000, b:0.0000, b1:0.0000, b2:0.0000, total:0.0000, seed:52600.3711, preA2223:0.0000, cout2223:0.0000, preA24:0.0000, cout24:0.0000, r2025:0.0000, aporte:52600.3711, valuation:0.0000, fdb:0.00000000, special:"" },
+  { name:"Banco Votorantim", on:0.0000, a1:0.0000, a2:0.0000, a3:0.0000, b:0.0000, b1:0.0000, b2:0.0000, total:0.0000, seed:0.0000, preA2223:5000000.0000, cout2223:0.0000, preA24:0.0000, cout24:0.0000, r2025:0.0000, aporte:5000000.0000, valuation:76499964.2696, fdb:0.06535951, special:"Nota Conv." },
+  { name:"RSUs Livres", on:0.0000, a1:0.0000, a2:0.0000, a3:0.0000, b:0.0000, b1:0.0000, b2:0.0000, total:0.0000, seed:0.0000, preA2223:0.0000, cout2223:0.0000, preA24:0.0000, cout24:0.0000, r2025:0.0000, aporte:0.0000, valuation:0.0000, fdb:0.06866113, special:"RSUs" },
+  { name:"RSUs Distribu\u00eddas", on:0.0000, a1:0.0000, a2:0.0000, a3:0.0000, b:0.0000, b1:0.0000, b2:0.0000, total:0.0000, seed:0.0000, preA2223:0.0000, cout2223:0.0000, preA24:0.0000, cout24:0.0000, r2025:0.0000, aporte:0.0000, valuation:0.0000, fdb:0.02362072, special:"RSUs" },
+  { name:"SOP", on:0.0000, a1:0.0000, a2:0.0000, a3:0.0000, b:0.0000, b1:0.0000, b2:0.0000, total:0.0000, seed:0.0000, preA2223:0.0000, cout2223:0.0000, preA24:0.0000, cout24:0.0000, r2025:0.0000, aporte:0.0000, valuation:0.0000, fdb:0.09999964, special:"SOP" }
+];
+const TIPO_COLORS   = ["#185FA5","#3B6D11","#BA7517","#534AB7","#993C1D","#993356","#0F6E56"];
+const RODADA_LABELS = ['Seed 2021','Pré-A 2022-23','Cash-out 2022-23','Pré-A 2024','Cash-out 2024','Rodada 2025'];
+const RODADA_COLORS = ['#185FA5','#3B6D11','#639922','#BA7517','#EF9F27','#993C1D'];
+const RODADA_KEYS   = ['seed','preA2223','cout2223','preA24','cout24','r2025'];
+const ACAO_KEYS     = ['on','a1','a2','a3','b','b1','b2'];
+const RODADA_TOTALS = [2104014.84,10608325.35,1111674.65,2463200,615800,9099901.23];
+
+function doLogin(){const u=document.getElementById('username').value.trim(),p=document.getElementById('password').value;if(USERS[u]&&USERS[u]===p){document.getElementById('login-screen').style.display='none';document.getElementById('dashboard').style.display='block';initDashboard();}else{document.getElementById('login-error').style.display='block';}}
+document.getElementById('password').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+function doLogout(){document.getElementById('dashboard').style.display='none';document.getElementById('login-screen').style.display='flex';document.getElementById('password').value='';document.getElementById('username').value='';}
+function fmt(n){return n.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});}
+function fmtN(n){return n>0?fmt(Math.round(n)):'—';}
+function fmtUSD(n){return n>0?'$ '+fmt(n):'—';}
+function fmtPctShort(n){return(n*100).toFixed(2)+'%';}
+let chartsInit=false,chartRodadasObj=null;
+function initDashboard(){
+  if(chartsInit)return;chartsInit=true;
+  const valid=INVESTORS.filter(i=>i.aporte>0||i.fdb>0);
+  const totalAporte=valid.reduce((s,i)=>s+i.aporte,0);
+  const totalAcoes=INVESTORS.reduce((s,i)=>s+i.total,0);
+  const avgValuation=valid.filter(i=>i.valuation>0).reduce((s,i,_,a)=>s+i.valuation/a.length,0);
+  document.getElementById('metrics-grid').innerHTML=`
+    <div class="metric-card"><div class="metric-label">Investidores</div><div class="metric-value">${valid.length}</div><div class="metric-sub">com aporte ou participação</div></div>
+    <div class="metric-card"><div class="metric-label">Total captado</div><div class="metric-value" style="font-size:18px">$ ${fmt(totalAporte)}</div><div class="metric-sub">todas as rodadas</div></div>
+    <div class="metric-card"><div class="metric-label">Total de ações</div><div class="metric-value">${fmt(Math.round(totalAcoes))}</div><div class="metric-sub">emitidas (fully diluted)</div></div>
+    <div class="metric-card"><div class="metric-label">Valuation médio</div><div class="metric-value" style="font-size:18px">$ ${fmt(avgValuation)}</div><div class="metric-sub">média ponderada</div></div>
+    <div class="metric-card"><div class="metric-label">Rodadas</div><div class="metric-value">4</div><div class="metric-sub">Seed · 2022 · 2024 · 2025</div></div>
+    <div class="metric-card"><div class="metric-label">Tipos de ação</div><div class="metric-value">7</div><div class="metric-sub">ON B · A1 · A2 · A3 · B · B1 · B2</div></div>`;
+  const tipoTotals=ACAO_KEYS.map(k=>INVESTORS.reduce((s,i)=>s+i[k],0));
+  new Chart(document.getElementById('chartTipos'),{type:'doughnut',data:{labels:["ON B","Pref A1","Pref A2","Pref A3","Pref B","Pref B1","Pref B2"],datasets:[{data:tipoTotals,backgroundColor:TIPO_COLORS,borderWidth:1,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'right',labels:{font:{size:11},padding:8,boxWidth:10}},tooltip:{callbacks:{label:c=>` ${c.label}: ${fmt(Math.round(c.raw))} ações`}}}}});
+  const sorted=[...INVESTORS].filter(i=>!i.special).sort((a,b)=>b.fdb-a.fdb).slice(0,10);
+  new Chart(document.getElementById('chartTop10'),{type:'bar',data:{labels:sorted.map(i=>i.name),datasets:[{data:sorted.map(i=>parseFloat((i.fdb*100).toFixed(2))),backgroundColor:'#185FA5',borderRadius:4}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.raw.toFixed(2)}%`}}},scales:{x:{ticks:{callback:v=>v+'%',font:{size:10}},grid:{color:'rgba(0,0,0,0.05)'}},y:{ticks:{font:{size:10}}}}}});
+  updateRodadasChart(null);renderTable();
+}
+function updateRodadasChart(inv){
+  const title=document.getElementById('rodadas-title'),subtitle=document.getElementById('rodadas-subtitle'),legend=document.getElementById('legend-rodadas');
+  let data,colors;
+  if(inv){data=RODADA_KEYS.map(k=>inv[k]||0);colors=data.map((v,i)=>v>0?RODADA_COLORS[i]:'#e0e0e0');title.textContent=`Aportes por rodada — ${inv.name}`;subtitle.style.display='block';subtitle.textContent=`Total investido: $ ${fmt(inv.aporte)}`;legend.innerHTML=RODADA_LABELS.map((r,i)=>data[i]>0?`<span><span class="legend-dot" style="background:${RODADA_COLORS[i]}"></span>${r}: $ ${fmt(data[i])}</span>`:'').join('');}
+  else{data=RODADA_TOTALS;colors=RODADA_COLORS;title.textContent='Aportes por rodada';subtitle.style.display='none';legend.innerHTML=RODADA_LABELS.map((r,i)=>`<span><span class="legend-dot" style="background:${RODADA_COLORS[i]}"></span>${r}: $ ${fmt(data[i])}</span>`).join('');}
+  if(chartRodadasObj){chartRodadasObj.data.datasets[0].data=data;chartRodadasObj.data.datasets[0].backgroundColor=colors;chartRodadasObj.update();}
+  else{chartRodadasObj=new Chart(document.getElementById('chartRodadas'),{type:'bar',data:{labels:RODADA_LABELS,datasets:[{data,backgroundColor:colors,borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' $ '+fmt(c.raw)}}},scales:{y:{ticks:{callback:v=>v>=1e6?'$ '+(v/1e6).toFixed(1)+'M':'$ '+fmt(v),font:{size:10}},grid:{color:'rgba(0,0,0,0.05)'}},x:{ticks:{font:{size:10},autoSkip:false,maxRotation:20}}}}});}
+}
+function onSearch(){const val=document.getElementById('search-input').value;document.getElementById('clear-btn').style.display=val?'block':'none';renderTable();}
+function clearSearch(){document.getElementById('search-input').value='';document.getElementById('clear-btn').style.display='none';renderTable();}
+function renderTable(){
+  const search=document.getElementById('search-input').value.toLowerCase().trim();
+  const filterTipo=document.getElementById('filter-tipo').value;
+  let data=[...INVESTORS].filter(i=>i.total>0||i.fdb>0||i.aporte>0);
+  if(search)data=data.filter(i=>i.name.toLowerCase().includes(search));
+  if(filterTipo)data=data.filter(i=>i[filterTipo]>0);
+  data.sort((a,b)=>b.fdb-a.fdb);
+  if(data.length===1&&data[0].aporte>0)updateRodadasChart(data[0]);
+  else updateRodadasChart(null);
+  const tot={on:0,a1:0,a2:0,a3:0,b:0,b1:0,b2:0,total:0,seed:0,preA2223:0,cout2223:0,preA24:0,cout24:0,r2025:0,aporte:0,fdb:0};
+  data.forEach(i=>{ACAO_KEYS.forEach(k=>tot[k]+=i[k]);RODADA_KEYS.forEach(k=>tot[k]+=i[k]);tot.total+=i.total;tot.aporte+=i.aporte;tot.fdb+=i.fdb;});
+  document.getElementById('table-body').innerHTML=data.map(inv=>{
+    const sp=inv.special?` <span class="badge badge-special">${inv.special}</span>`:'';
+    return `<tr>
+      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;" title="${inv.name}">${inv.name}${sp}</td>
+      <td class="sep" style="text-align:right;${!inv.on?'color:#bbb':''}">${fmtN(inv.on)}</td>
+      <td style="text-align:right;${!inv.a1?'color:#bbb':''}">${fmtN(inv.a1)}</td>
+      <td style="text-align:right;${!inv.a2?'color:#bbb':''}">${fmtN(inv.a2)}</td>
+      <td style="text-align:right;${!inv.a3?'color:#bbb':''}">${fmtN(inv.a3)}</td>
+      <td style="text-align:right;${!inv.b?'color:#bbb':''}">${fmtN(inv.b)}</td>
+      <td style="text-align:right;${!inv.b1?'color:#bbb':''}">${fmtN(inv.b1)}</td>
+      <td style="text-align:right;${!inv.b2?'color:#bbb':''}">${fmtN(inv.b2)}</td>
+      <td style="text-align:right;font-weight:600">${fmtN(inv.total)}</td>
+      <td class="sep" style="text-align:right;${!inv.seed?'color:#bbb':''}">${fmtUSD(inv.seed)}</td>
+      <td style="text-align:right;${!inv.preA2223?'color:#bbb':''}">${fmtUSD(inv.preA2223)}</td>
+      <td style="text-align:right;${!inv.cout2223?'color:#bbb':''}">${fmtUSD(inv.cout2223)}</td>
+      <td style="text-align:right;${!inv.preA24?'color:#bbb':''}">${fmtUSD(inv.preA24)}</td>
+      <td style="text-align:right;${!inv.cout24?'color:#bbb':''}">${fmtUSD(inv.cout24)}</td>
+      <td style="text-align:right;${!inv.r2025?'color:#bbb':''}">${fmtUSD(inv.r2025)}</td>
+      <td class="sep" style="text-align:right;font-weight:600">${fmtUSD(inv.aporte)}</td>
+      <td style="text-align:right">${inv.valuation>0?'$ '+fmt(inv.valuation):'—'}</td>
+      <td style="text-align:right">${fmtPctShort(inv.fdb)}</td>
+    </tr>`;
+  }).join('')+`<tr class="total-row">
+    <td>Total</td>
+    <td class="sep" style="text-align:right">${fmtN(tot.on)}</td><td style="text-align:right">${fmtN(tot.a1)}</td><td style="text-align:right">${fmtN(tot.a2)}</td><td style="text-align:right">${fmtN(tot.a3)}</td><td style="text-align:right">${fmtN(tot.b)}</td><td style="text-align:right">${fmtN(tot.b1)}</td><td style="text-align:right">${fmtN(tot.b2)}</td><td style="text-align:right">${fmtN(tot.total)}</td>
+    <td class="sep" style="text-align:right">$ ${fmt(tot.seed)}</td><td style="text-align:right">$ ${fmt(tot.preA2223)}</td><td style="text-align:right">$ ${fmt(tot.cout2223)}</td><td style="text-align:right">$ ${fmt(tot.preA24)}</td><td style="text-align:right">$ ${fmt(tot.cout24)}</td><td style="text-align:right">$ ${fmt(tot.r2025)}</td>
+    <td class="sep" style="text-align:right">$ ${fmt(tot.aporte)}</td><td style="text-align:right">—</td><td style="text-align:right">${fmtPctShort(tot.fdb)}</td>
+  </tr>`;
+}
+</script>
+</body>
+</html>
